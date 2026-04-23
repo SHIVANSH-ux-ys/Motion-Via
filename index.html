@@ -35,11 +35,125 @@
         <button class="shape-btn" id="btn-nebula"onclick="setShape('nebula')"><span class="icon"></span>Nebula</button>
     </div>
     <div class="section-label">Color</div>
+    <div class="color-row">
+        <input type="color" id="colorPicker" value="#ff0055">
+        <div class="color-presets">
+            <div class="present-dot active " style="background:#ff0055" data-color="#ff0055" onclick="applyPreset(this)"></div>
+            <div class="preset-dot" style="background:#00ffcc" data-color="#00ffcc" onclick="applyPreset(this)"></div>
+            <div class="preset-dot" style="background:#7744ff" data-color="#7744ff" onclick="applyPreset(this)"></div>
+            <div class="preset-dot" style="background:#ffaa00" data-color="#ffaa00" onclick="applyPreset(this)"></div>
+            <div class="preset-dot" style="background:#00aaff" data-color="#00aaff" onclick="applyPreset(this)"></div>
+            <div class="preset-dot" style="background:#ff6600" data-color="#ff6600" onclick="applyPreset(this)"></div>
+            <div class="preset-dot" style="background:#ffffff" data-color="#ffffff" onclick="applyPreset(this)"></div>
+            <div class="preset-dot rainbow-dot" data-color="rainbow" onclick="applyPreset(this)" title="Rainbow"></div>
+        </div>
+    </div>
+    <div class="section-label">Motion Count</div>
+    <div class="slider-row">
+        <input type="range" id="densitySlider" min="1" max="10" value="4" step="1">
+        <span class="slider-val" id="densityVal">100K</span>
+    </div>
+    <div class="number-row">
+        <input type="number" id="particleInput" value="100000" min="1000" max="3000000" step="1000" placeholder="Custom...">
+        <button class="apply-btn" onclick="applyCustomCount()">Apply</button>
+    </div>
+    <div class="section-label">Particle Size</div>
+    <div class="slider-row">
+        <input type="range" id="sizeSlider" min="1" max="20" value="7" step="1">
+        <span class="slider-val" id="sizeVal">0.07</span>
+    </div>
+    <div class="section-label">Rotation Speed</div>
+    <div class="speed-row">
+        <button class="speed-btn" onclick="setSpeed(0, this)">Pause</button>
+        <button class="speed-btn active" onclick="setspeed(0.005,this)">Slow</button>
+        <button class="speed-btn" onclick="setSpeed(0.02,this)">Fast</button>
+        <button class="speed-btn" onclick="setSpeed(0.06, this)">Hyper</button>
+    </div>
+    <div class="section-label">Transition Speed</div>
+    <div class="speed-row">
+        <button class="speed-btn active" onclick="setTransition(0.05, this)">Flow</button>
+        <button class="speed-btn " onclick="setTransition(0.15,this)">Med</button>
+        <button class="speed-btn" onclick="setTransition(0.40,this)">Snap</button>
+    </div>
+    <div class="section-label">Fog Density</div>
+    <div class="slider-row">
+        <input type="range" id="fogSlider" min="0" max="40" value="18" step="1">
+        <span class="slider-val" id="fogVal">0.018</span>
+    </div>
+    <div class="section-label">Background</div>
+    <div class="speed-row">
+        <button class="speed-btn active" onclick="setBg('dark', this)">Dark</button>
+        <button class="speed-btn" onclick="setBug('nebula',this)">Nebula</button>
+        <button class="speed-btn" onclick="setBg('stars', this)">Stars</button>
+    </div>
+    <div class="section-label">Audio React</div>
+    <div class="speed-row">
+        <button class="speed-btn" id="audioBtn" onclick="toggleAudio()">🎙 Enable Mic</button>
+        <span class="slider-val" id="audioLevel" style="min-width:38px;text-align:center">-</span>
+    </div>
+    <div class="section-label">Effects</div>
+    <div class="speed-row">
+        <button class="speed-btn" id="trailBtn" onclick="toggleTrail()">Trails OFF</button>
+        <button class="speed-btn" id="orbitBtn" onclick="toggleOrbit()">Orbit OFF</button>
+    </div>
+    <div class="section-label">Voice Commands <span class="kbd">V</span></div>
+    <div class="speed-row">
+        <button class="speed-btn" id="voiceBtn" onclick="toggleVoice()">🎤  Voice OFF </button>
+    </div>
+    <div id="voice-log" style="margin-top:6px;font-size:0.50rem;color:rgba(255,255,255,0.35);line-height:1.8;min-height:20px;font-family:'Space Mono',monospace;"></div>
+    <div class="number-row" style="margin-top:6px;">
+        <input type="text" id="textCmd" placeholder="type command..." style="flex:1;background:rgba(0,0,0,0.4);border:1px solid var(--border);color:var(--text);font-family:'Space Mono',monospace;font-size:0.60rem;padding:5px 8px;border-radius: 6px; outline:none;" onkeydown="if(event.key == 'Enter'){processVoiceCommand(this.value);this.value='';}">
+        <button class="apply-btn" onclick-="processVoiceCommand(document.getElementById('textCmd').value);document.getElementById('textCmd').value=''">Go</button>
+    </div>
+    <div class="section-label">Exportd</div>
+    <button class="full-btn" onclick="takeScreenShot()">>📷 Save PNG</button>
+    <div id="status-bar">
+        <div id="status-dot"></div>
+        <div id="status-text">Waiting for camera...</div>
+    </div>
+    <div class="two-hand-legend">
+        <div class="thl-row"><span class="thl-tag L">L</span> Oepen/Close  → Expand/Contract</div>
+        <div class="thl-row"><span class="thl-tag R">R</span> Move Wrist → Rotate scene</div>
+        <div class="thl-row"><span class="thl-tag LR">LR</span> Both pinch  → Reset zoom</div>
+    </div>
+    <div class="hint">
+        <span>Tab</span> panel &nbsp;|&nbsp; <span>P</span> screenshot &nbsp;|&nbsp; <span>0</span> orbit &nbsp;|&nbsp; <span>Scroll</span> zoom
+    </div>
+</div>
 
+<div id="hand-viewer">
+    <div class="hv-header">
+        <span class="hv-title">✋ Hand Tracking</span>
+        <div class="hv-indicators">
+            <span class="hv-dot" id="hv-L">L</span>
+            <span id="hv-dot" id="hv-R">R</span>
+        </div>
+    </div>
+    <canvas id="handCanvas"></canvas>
+    <div class="hv-footer">
+        <span id="hv-info-L">Left: -</span>
+        <span id="hv-info-R">Right: -</span>
+    </div>
 
+    <div id="hand-bar-wrap">
+        <div class="bar-label">Expand </div>
+        <div id="hand-bar-track"><div id="hand-bar-fill"></div></div>
+        <div class="bar-label" id="hand-pct">-</div>
+    </div>
 
+    <div id="stats">
+        <div id="stat-fps">FPS: --</div>
+        <div id="stat-particles">Particles: 100K</div>
+        <div id="stat-shape">Shape: heart</div>
+    </div>
 
+    <div id="audio-bar-wrap" style="display:none">
+        <div id="audio-bar-fill"></div>
+    </div>
+    <video id="input_video"></video>
+    <canvas id="bgCanvas"></canvas>
 
+    <script src="script.js"></script>
 <body>
     
 </body>
