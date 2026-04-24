@@ -18,7 +18,8 @@ Motion Via is a fun web experiment where you can play around with floating 3D pa
 Because this project needs to access your webcam and microphone to work,it has to run on a secure server.Don't worry, it's easy to spin one up locally on your computer!
 
 **Step 1:** Open your terminal in this project foler.
-**Step 2:** Start a quick local server.If you have Python installed, you can just run this command: ```bash
+**Step 2:** Start a quick local server.If you have Python installed, you can just run this command: 
+```bash
 python3 -m http.server 3000
 ```
 *(If you prefer Node.js,`npx serve` works perfectly too!)*
