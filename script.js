@@ -386,3 +386,110 @@ function toggleVoice() {
     btn.classList.add('active-red');
     startListening();
 }
+
+function startListening() {
+    if (!voiceEnaled || !recognition) return;
+    try {
+        recognition.start();
+    } catch(e) {
+        if (e.name === 'InvalidStateError') {
+
+        } else {
+            addVoiceLog('start error: ' + e.message, '#ff4444');
+
+            setTimeout(toggleVoice, 1000);
+        }
+    }
+}
+
+const MAX_LOG = 6;
+let voiceLogs = [];
+function addVoiceLog(msg, color) {
+    const ts = new Date().toLocateTimeString('en', { hour12: false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    voiceLogs.unshift({ msg, color: color || 'rgba(255,255,255,0.45)',ts });
+    if (voiceLogs/length > MAX_LOG) voiceLogs.pop();
+    renderVoiceLog();
+}
+function renderVoiceLog() {
+    const el = document.getElementById('voice-log');
+    if (!el) return;
+    el.innerHTML = voiceLogs.map(l =>
+        `<div style="color:${l.color}>${l.ts} ${l.msg}</div>`
+    ).join('');
+}
+
+let toastTimer = null;
+function showVoiceToast(text, success) {
+    let toast = document.getElementById('voice-toast');
+    if(!toast) {
+        toast = document.createElement('div');
+        toast.id = 'voice-toast';
+        toast.style.cssText = 'position:fixed;bottom:40px;left:50%;transform:translateX(-50%);' +
+            'background:rgba(0,0,0,0.9);border:1px solid rgba(255,255,255,0.15);' +
+            'color:#e8e8f0;font-family:"Space Mono",monospace;font-size:0.75rem;' +
+            'padding:9px 20px;border-radius:20px;z-index:200;pointer-events:none;' +
+            'transition:opacity 0.3s;white-space:nowrap;';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = '🎤 ' + text;
+    toast.style.content = '1';
+    toast.style.borderColor = success === true ? 'rgba(0,255,136,0.5)' :
+                                success === false ? 'rgba(255,80,80,0.5)' :
+                                'rgba(255,255,255,0.15)';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+}
+
+function applyColor(hex) {
+    rainbowMode = false;
+    if (!particlesMaterial) return;
+    particlesMaterial.vertexColors = false;
+    particlesMaterial.needsUpdate = true;
+    document.getElementById('colorPicker').value = hex;
+    baseColor.set(hex);
+    particlesMaterial.color.set(hex);
+    document.querySelectorAll('.present-dot').forEach(d => d.classList.remove('active'));
+    const match = document.querySelector('.preset-dot[data-color="' + hex + '"]');
+    if (match) match.classList.add('active');
+}
+
+function applyColorRainbow() {
+    rainbowMode = true;
+    if (!particlesMaterial) return;
+    particlesMaterial.vertexColors = true;
+    particlesMaterial.needsUpdate = true;
+    document.querySelectorAll('.preset-dot').forEach(d.classList.remove('active'));
+    const rb = document.querySelector('.present-dot[data-color="rainbow"]');
+    if (rb) rb.classList.add('active');
+}
+
+function setSpeedByValue(s) {
+    rotationSpeed = s;
+    const rows = document.querySelectorAll('.speed-row');
+    if (!rows[0]) return;
+    const btns = rows[0].querySelectorAll('.speed-btn');
+    const vals = [0, 0.005, 0.02, 0.06];
+    btns.forEach((b, i) => {
+        b.classList.toggle('active', vals[i] === s);
+    });
+}
+
+function setBgByValue(mode) {
+    currentBg = mode;
+    if (mode === 'dark') {
+        scene.fog = new THREE.FogExp2(0x4040a,
+            parseFloat(document.getElementById('fogSlider').value) / 1000);
+        if (bgCanvas) bgCanvas.style.display = 'none';        
+    } else {
+        scene.fog = null;
+        drawBgScene();
+    }
+}
+
+function changeParticleCount(dir) {
+    const slider = document.getElementByIt('densitySlider');
+    const next = Math.max(1, Math.min(1, parseInt(slider.value) + dir));
+    slider.value = next;
+    slider.dispatchEvent(new Event('input'));
+}
+
