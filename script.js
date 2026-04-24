@@ -945,5 +945,88 @@ function onResults(results) {
         infoL.textContent = 'Left: -'; infoR.textContent = 'Right: -';
         return;
     }
-    
+
+    statusDot.classList.add('active');
+    hvL.classList.remove('active-L'); hvR.classList.remove('active-R');
+
+    let leftLm = null, rightLm = null;
+
+    lms.forEach((lm, idx) =>{
+        const rawLabel = handedness && handedness[idx] ? handedness[idx].label : 'Right';
+        const isLeft = (rawLabel === 'Right');
+
+        if(isLeft){
+            drawHandSkeleton(lm,'#00ff88','#00ffcc');
+            hvL.classList.add('active-L');
+            infoL.textContent = 'Left:' + gestureLabel(lm);
+            leftLm = lm;
+        }
+        else{
+            drawHandSkeleton(lm,'#00ccff','#44eeff');
+            hvR.classList.add('active-R');
+            inforR.textContent = 'Right:' + gestureLabel(lm);
+            rightLm = lm;
+        }
+    });
+        if(leftLm){
+            const factor = Math.max(0.2,Math.min(3.0,handSpan(leftLm)*9.5));
+            handExpansionFactor += (factor - handExpansionFactor) * 0.12;
+        }
+        if(rightLm){
+            rightHandPresent = true;
+            const wx = rightLm[0].x;
+            const wy = rightLm[0].y;
+            if(prevWristX != null){
+                const dx = wx -prevWristX;
+                const dy = wy - prevWristX;
+
+                manualRotY -= dx *4.0;
+                manualRotX += dy*2.5;
+                manualRotX = Math.max(-1.4,Math.min(1.4,manualRotX));
+            }
+
+            prevWristX = wx;
+            prevWristY = wy;
+
+            if(!leftLm){
+                const factor = Math.max(0.2,Math.min(3.0,handSpan(rightLm)*9.5));
+                handExpansionFactor += (factor - handExpansionFactor)*0.12;
+
+            }
+            
+        }else{
+            rightHandPresent = false;
+            prevWristX = prevWristY = null;
+        }
+        if(!leftLm){
+            const factor = Math.max(0.2,Math.min(3.0,handSpan(rightLm)*9.5));
+            handExpansionFactor += (factor - handExpansionFactor)* 0.12;
+        }
+    } else {
+        rightHandPresent = false;
+        prevWristX = prevWristY = null;
+    }
+
+    if (leftLm && rightLm) statusTxt.textContent = '2 hands ✓ - L:expand R:rotate';
+    else if (leftLm) statusTxt.textContent = 'Left ✓ - open/close to expand';
+    else if (rightLm) statusTxt.textContent = 'Right ✓ -move wrist to rotate';
 }
+
+const hands = new Hands({
+    locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
+hands.setOptions({
+    maxNumbers: 2,
+    modalComplexity: 1,
+    minDetectionConfidence: 0.55,
+    minTrackingConfidence: 0.55
+});
+hands.onResults(onResults);
+
+const camUtils = new Camera(videoEl, {
+    onFrame: async () => { await hands.send({ image: videoEl }); },
+    width: 640, height: 480
+});
+
+init();
+camUtils.start();
