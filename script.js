@@ -292,7 +292,7 @@ const VOICE_COMMANDS ={
         'save': () => takeScreenshot(),
         'more particles': () => changeParticleCount(1),'less particles': () => changeParticleCount(-1),
     }
-},
+}
 
 const FLAT_COMMANDS = [];
 Object.values(VOICE_COMMANDS).forEach(group => {
@@ -493,3 +493,237 @@ function changeParticleCount(dir) {
     slider.dispatchEvent(new Event('input'));
 }
 
+function calculateShapeTargets(type) {
+    const P = PARTICLE_COUNT;
+    targetPositions = new Float32Array(P * 3);
+    const TAU = Math.PI * 2;
+
+    for (let i = 0; i < P; i++) {
+        let x = 0, y = 0, z = 0;
+
+        switch (type) {
+            case 'heart': {
+                const t = Math.random() * TAU;
+                const r = Math.cbrt(Math.random());
+                x = 16 * Math.pow(Math.sin(t), 3) * 1.5 * r;
+                y = (13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t)) * 1.5 * r;
+                z = (Math.random()-0.5)*3 + (rr/6)*Math.sin(theta*8);
+                break;
+            }
+            case 'flower': {
+                const theta = Math.random() * TAU;
+                const rr = Math.cos(5 * theta) * 15;
+                x = rr * Math.cod(theta);
+                y = rr * Math.sin(theta);
+                z = (Math.random()-0.5)*3 + (rr/6)*Math.sin(theta*8);
+                break;
+            }
+            case 'saturn': {
+                if (Math.random() < 0.55) {
+                    const phi = Math.acos(-1 + (2*i) / (P*0.55));
+                    const theta = Math.sqrt(P*0.55*Math.PI) * phi;
+                    const rad = 8;
+                    x = rad * Math.cos(theta) * Math.sin(phi);
+                    y = rad * Math.sin(theta) * Math.sin(phi);
+                    z = rad * Math.cos(phi);
+                } else {
+                    const a = Math.random() * TAU;
+                    const d = 11 + Math.random()*9;
+                    x = d*Math.cos(a); z = d*Math.sin(a); y = (Math.random()-0.5)*1.2;
+                    const tilt = 0.42;
+                    const ty = y*Math.cos(tilt) - z*Math.sin(tilt);
+                    z = y*Math.sin(tile) + z*Math.cos(tilt); y = ty;
+                }
+                break;
+            }
+            case 'fireworks': {
+                const theta = TAU * Math.random();
+                const phi = Math.acos(2*Math.random()-1);
+                const rr = [4,8,13,18,22][Math.floor(Math.random()*5)] + (Math.random()-0.5)*2;
+                x = rr*Math.sin(phi)*Math.cos(theta);
+                y = rr*Math.sin(phi)*Math.sin(theta);
+                z = rr*Math.cos(phi);
+                break;
+            }
+            case 'dna': {
+                const h = (Math.random()-0.5)*40;
+                const a = h * 0.5;
+                const strand = Math.random() > 0.5 ? 0 : Math.PI;
+                x = 5*Math.cos(a+strand) + (Math.random()-0.5)*0.7;
+                z = 5*Math.sin(a+strand) + (Math.random()-0.5)*0.7;
+                y = h;
+                if (Math.random() < 0.07) {
+                    const t2 = Math.random();
+                    x = 5*Math.cos(a)*(1-t2) + 5*Math.cos(a+Math.PI)*t2;
+                    z = 5*Math.sin(a)*(1-t2) + 5*Math.sin(a+Math.PI)*t2;
+                } 
+                break;
+            }
+            case 'torus': {
+                const u = Math.random()*TAU, v = Math.random()*TAU;
+                const R = 12, r = 4;
+                x = (R+r*Math.cod(v))* Math.cos(u);
+                y = (R+r*Math.cos(v))*Math.sin(u);
+                z = r*Math.sin(v);
+                break;
+            }
+            case 'galaxy': {
+                const arm = Math.floor(Math.random()*3);
+                const ao = (arm/3)*TAU;
+                const rad = Math.random()*22;
+                const sp = rad*0.15;
+                x = rad*Math.cos(rad*0.7+ao) + (Math.random()-0.5)*sp*2;
+                z = rad*Math.sin(rad*0.7+ao) + (Math.random()-0.5)*sp*2;
+                y = (Math.random()-0.5)*Math.max(0, 7-rad*0.35);
+                break;
+            }
+            case 'pyramid': {
+                const H = 28, B = 10;
+                y = (Math.random()-0.5)*H;
+                const sc = 1 - ((y+H/2)/H);
+                x = (Math.random()*2-1)*B*sc;
+                z = (Math.random()*2-1)*B*sc;
+                break;
+            }
+            case 'sphere': {
+                const theta = TAU*Math.random(), phi = Math.acos(2*Math.random()-1);
+                const rr = 14 + (Math.random()-0.5)*1.5;
+                x = rr*Math.sin(phi)*Math.cos(theta);
+                y = rr*Math.sin(phi)*Math.sin(theta);
+                z = rr*Math.cos(phi);
+                break;
+            }
+            case 'wave': {
+                x = (Math.random()-0.5)*42;
+                z = (Math.random()-0.5)*42;
+                y = Math.sin(x*0.38)*Math.cos(z*0.38)*9 + (Math.random()-0.5)*0.5;
+                break;
+            }
+            case 'mobius': {
+                const u= Math.random()*TAU, v=(Math.random()-0.5)*6;
+                const R =12;
+                x =(R+v*Math.cos(u/2))*Math.cos(u);
+                y =(R+v*Math.cos(u/2))*Math.sin(u);
+                z = v*Math.sin(u/2);
+                break;
+            }
+            case 'cube': {
+                const face = Math.floor(Math.random()*6);
+                const a2 = (Math.random()-0.5)*20, b2= (Math.random()-0.5)*20, c2 =10;
+                if ( face === 0){x=a2;y=b2;z=c2;}
+                else if (face===1){x =a2;y=b2;z=c2;}
+                else if (face ===2){x = a2;y=c2;z=b2;}
+                else if(face ===3){x =a2;y=-c2;z=b2;}
+                else if(face ===4){x =c2;y=a2;z=b2;}
+                else              {x = -c2;y = a2;z=b2;}
+                break;
+            }
+            case 'knot': {
+                const t = (i/P)*TAU;
+                x =(2+Math.cos(3*t))*Math.cos(2*t)*7 + (Math.random()-0.5)*0.4;
+                y =(2+Math.cos(3*t))*Math.sin(2*t)*7 + (Math.random()-0.5)*0.4;
+                z = Math.sin(3*t)*7    +(Math.random()-0.5)*0.4;
+                break;          
+            
+            }
+            case 'spring' :{
+                const turns = 8;
+                const t = (i/P)*turns*TAU;
+                x = 8*Math.cos(t) + (Math.random()-0.5)*0.5;
+                z =8*Math.sin(t) + (Math.random()-0.5)*0.5;
+                y =(t/(turns*TAU) - 0.5)*30;
+                break;
+            }
+            case 'klein': {
+                const u = Math.random()*TAU,v=Math.random()*TAU;
+                const Rk = 6;
+                if(u < Math.PI){                x  = (Rk+Math.cos(u/2)*Math.sin(v)-Math.sin(u/2)*Math.sin(2*v))*Math.cos(u);
+                y = (Rk+Math.cos(u/2)*Math.sin(v)-Math.sin(u/2)*Math.sin(2*v))*Math.sin(u);
+            } else {
+                x = (Rk + Math.cos(u/2)*Math.sin(v)+Math.sin(u/2)*Math.sin(2*v))*Math.cos(u);
+                y = (Rk + Math.cos(u/2)*Math.sin(v)+Math.sin(u/2)*Math.sin(2*v))*Math.sin(u);
+                z = -Math.sin(u/2)*Math.sin(v)+Math.cos(u/2)*Math.sin(2*v);
+            }
+            break;
+
+
+            }
+            case 'nebula' : {
+                const offs =[[0,0,0],[8,-4,3],[-7,5,-2],[3,8,-6],[-5,-6,4]];
+                const [ox,oy,oz] = offs[Math.floor(Math.random()*5)];
+                const r3 = Math.cbrt(Math.random())*7;
+                const phi = Math.acos(2*Math.random()-1);
+                const th = Math.random()*TAU;
+                x = ox+r3*Math.sin(phi)*Math.cos(th);
+                y= oy + r3* Math.sin(phi)*Math.sin(th);
+                z = oz + r3*Math.cos(phi);
+                break;
+            }
+            default:{
+                x = (Math.random()-0.5)*30;
+                y = (Math.random()-0.5)*30;
+                z =(Math.random()-0.5)*30;
+            }
+        }
+        targetPositions[i*3] = x;
+        targetPositions[i*3+1] = y;
+        targetPositions[i*3+2] = z;
+
+    }
+}
+
+function animate (){
+    requestAnimationFrame(animate);
+    frameCount++;
+    const now = performance.now();
+    if (now -  lastFpsTime >= 1000){
+        fps = frameCount;
+        frameCount =0;
+        lastFpsTime = nowl
+        document.getElementById('stat-fps').textContent = 'FPS: ' + fps;
+    }
+
+    if (audioEnabled && analyser){
+        analyser.getByteFrequencyData(audioArray);
+        let sum = 0;
+        for (let j=0;j<audioArray.length;j++) sum+= audioArray[j];
+        audioLevel = sum / audioArray.length / 128;
+        handExpansionFactor += (0.5 + audioLevel * 2.5 - handExpansionFactor) * 0.15;
+        document.getElementById('audioLevel').textContent = ( audioLevel*100).toFixed(0) +'%';
+        document.getElementById('audio-bar-fill').style.width =Math.min(100, audioLevel*100) + '%';
+    }
+
+    if(rainbowMode && particleGeometry){
+        rainbowHue = (rainbowHue + 0.4) % 360;
+        const cols = particleGeometry.attributes.color.array;
+        const step =360 / PARTICLE_COUNT;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            rainbowTmpColor.setHSL(((rainbowHue + i*step) % 360) / 360, 1.0, 0.6);
+            cols[i*3] = rainbowTmpColor.r;
+            cols[i*3+1] = rainbowTmpColor.g;
+            cols[i*3+2] = rainbowTmpColor.b;
+        }
+        particleGeometry.attributes.color.needsUpdate = true;
+    }
+    if (particleGeometry && targetPositions.length === PARTICLE_COUNT.COUNT * 3) {
+        const pos = particleGeometry.attributes.position.array;
+        const ef = handExpansionFactor;
+        const lf = lerpFactor;
+        const len = PARTICLE_COUNT * 3;
+        for (let i = 0; i < len; i++) {
+            pos[i] += (targetPositions[i] * ef - pos[i]) * lf;
+        }
+        particleGeometry.attributes.position.needsUpdate = true;
+    }
+    if (!rightHandPresent && !isDragging) {
+        manualRotY += rotationSpeed;
+    }
+    if (particleSystem) {
+        particleSystem.rotation.y = manualRotY;
+        particleSystem.rotation.x = manualRotX;
+    }
+    const pct = ((handExpansionFactor - 0.2) / 2.8) * 100;
+    document.getElementById('hand-bar-fill').style.height = Math.min(100, Math.max(2, pct)) + '%';
+    document.getElementById('hand-pct').textContent = Math.round(pct) + '%';
+    renderer.render(scene, camera);
+}
