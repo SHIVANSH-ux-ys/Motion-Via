@@ -19,7 +19,7 @@ let audioLevel = 0;
 let voiceEnabled = false;
 
 let scene, camera, renderer;
-let particleGeometry, particleMaterial, particleSystem;
+let particleGeometry, particlesMaterial, particleSystem;
 let baseColor = new THREE.Color(0xff0055);
 let targetPositions  = new Float32Array(0);
 let rainbowTmpColor = new THREE.Color();
@@ -97,13 +97,12 @@ function buildParticleSystem(){
     particleGeometry = new THREE.BufferGeometry();
     const positions = new Float32Array(PARTICLE_COUNT * 3);
     for(let i =0; i< PARTICLE_COUNT * 3;i++)positions[i]=(Math.random() - 0.5) * 120;
-    particleGeometry.setAttribute('color',new THREE.BufferAttribute(positions,3));
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
     const colors = new Float32Array(PARTICLE_COUNT * 3).fill(1);
-    particleGeometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+    particleGeometry.setAttribute('color',new THREE.BufferAttribute(colors, 3));
 
-    const sprite = new Float32Array(PARTICLE_COUNT * 3).fill(1);
-    particleGeometry.setAttribute('position',new THREE.BufferAttribute(positions, 3));
+    const sprite = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/disc.png');
 
     particlesMaterial = new THREE.PointsMaterial({
         color: rainbowMode ? 0xffffff : baseColor,
@@ -131,11 +130,11 @@ function buildParticleSystem(){
 function initBgCanvas(){
     bgCanvas = document.getElementById('bgCanvas');
     bgCanvas.width = innerWidth;
-    bgCanvas.heigth = innerHeight;
+    bgCanvas.height = innerHeight;
     bgCtx = bgCanvas.getContext('2d');
 }
 function drawBgScene(){
-    if(!bgCanvas(ctx)) return;
+    if(!bgCtx) return;
     const w = bgCanvas.width, h = bgCanvas.height;
     bgCtx.clearRect(0,0,w,h);
     if(currentBg === 'dark'){
@@ -169,7 +168,7 @@ function drawBgScene(){
 
 function mulberry32(seed){
     return function(){
-        seed !=0; seed=seed+0x6D2B79F5 | 0;
+        seed |= 0; seed=seed+0x6D2B79F5 | 0;
         let t = Math.imul(seed ^ seed >>> 15,1 | seed);
         t =t +Math.imul(t^t>>>7,61 | t) ^ t;
         return ((t^t >>> 14) >>> 0) / 4294967296;
@@ -187,21 +186,21 @@ function initHandCanvas(){
     clearHandCanvas();
 }
 function clearHandCanvas(){
-    handCtx.clearReact(0,0,HCV_W,HCV_H);
-    handCtx.fillstyle = '#000';
+    handCtx.clearRect(0,0,HCV_W,HCV_H);
+    handCtx.fillStyle = '#000';
     handCtx.fillRect(0,0,HCV_W,HCV_H);
 }
-function drawHandSkeleton(landmarks,boneColor,dotColor){
-    const tx = lm => (1 - lm.x)*HCV_W;
-    const tv = lm => lm.v *HCV_H;
+function drawHandSkeleton(landmarks,boneColor,dotColor) {
+    const tx = lm => (1 - lm.x) * HCV_W;
+    const ty = lm => lm.y *HCV_H;
 
-    handCtx.stokeStyle = boneColor;
-    handCtx.linewidth =1.5;
+    handCtx.strokeStyle = boneColor;
+    handCtx.lineWidth =1.5;
     handCtx.shadowColor = boneColor;
-    handCtx.shadowBlue = 5;
+    handCtx.shadowBlur = 5;
     HAND_CONNECTIONS.forEach(([a,b]) =>{
         handCtx.beginPath();
-        handCtx.moveTO(tx(landmarks[a]),ty(landmarks[a]));
+        handCtx.moveTo(tx(landmarks[a]),ty(landmarks[a]));
         handCtx.lineTo(tx(landmarks[b]),ty(landmarks[b]));
         handCtx.stroke();
     })
@@ -233,9 +232,10 @@ const VOICE_COMMANDS ={
         'pyramid': () => setShape('pyramid'),
         'triangle': () => setShape('pyramid'),
         'sphere': () => setShape('sphere'),
-        'ball': () => setShape('wave'),
+        'ball': () => setShape('sphere'),
         'wave': () => setShape('wave'),
-        'ocean': () => setShape('mobius'),
+        'ocean': () => setShape('wave'),
+        'mobius': () => setShape('mobius'),
         'cube': () => setShape('cube'),
         'box': () => setShape('cube'),
         'knot': () => setShape('knot'),
@@ -267,11 +267,11 @@ const VOICE_COMMANDS ={
         'slow': () => setSpeedByValue(0.005),
         'fast': () => setSpeedByValue(0.02),
         'hyper': () => setSpeedByValue(0.06),
-        'spin': () => setshapeByValue(0.06),
+        'spin': () => setSpeedByValue(0.06),
     },
     background: {
         'dark': () => setBgByValue('dark'),
-        'sapce': () => setBgByValue('nebula'),
+        'space': () => setBgByValue('nebula'),
         'stars': () => setBgByValue('stars'),
         'starfield': () => setBgByValue('stars'),
     },
@@ -302,10 +302,10 @@ FLAT_COMMANDS.sort((a, b) => b.phrase.length - a.phrase.length);
 
 function processVoiceCommand(rawText) {
     const text = rawText.trim().toLowerCase();
-    addVoiceLog('heard: "' + + text + '"');
+    addVoiceLog('heard: "' +  text + '"');
 
     for (const { phrase, fn } of FLAT_COMMANDS) {
-        const esc = phrase.replacee(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const esc = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const re = new RegExp('(?:^|\\s)' + esc + '(?:\\s|$)');
         if (re.test(text)) {
             fn();
@@ -319,7 +319,7 @@ function processVoiceCommand(rawText) {
 }
 
 function toggleVoice() {
-    const SR = window.speechRecognition || window.webkitSpeechRecognition;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SR) {
         showVoiceToast('Not supported - use Chrome/Edge', false);
         const btn = document.getElementById('voiceBtn');
@@ -339,7 +339,7 @@ function toggleVoice() {
     }
 
     recognition = new SR();
-    recognition.continous = false;
+    recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 5;
@@ -368,11 +368,11 @@ function toggleVoice() {
             voiceEnabled = false;
             btn.textContent = '🎤 Mic Denied';
             btn.classList.remove('active-red');
-            showVoiceToast('Mic access denied - sllow mic in browser settings', false);
+            showVoiceToast('Mic access denied - allow mic in browser settings', false);
             return;
         }
         if (e.error === 'no-speech' || e.error === 'aborted'){
-            if(voiceEnabled) setTimeput(startListening, 200);
+            if(voiceEnabled) setTimeout(startListening, 200);
         return;
         }
         if (voiceEnabled) setTimeout(startListening, 500);
@@ -388,7 +388,7 @@ function toggleVoice() {
 }
 
 function startListening() {
-    if (!voiceEnaled || !recognition) return;
+    if (!voiceEnabled || !recognition) return;
     try {
         recognition.start();
     } catch(e) {
@@ -405,16 +405,16 @@ function startListening() {
 const MAX_LOG = 6;
 let voiceLogs = [];
 function addVoiceLog(msg, color) {
-    const ts = new Date().toLocateTimeString('en', { hour12: false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const ts = new Date().toLocaleTimeString('en', { hour12: false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
     voiceLogs.unshift({ msg, color: color || 'rgba(255,255,255,0.45)',ts });
-    if (voiceLogs/length > MAX_LOG) voiceLogs.pop();
+    if (voiceLogs.length > MAX_LOG) voiceLogs.pop();
     renderVoiceLog();
 }
 function renderVoiceLog() {
     const el = document.getElementById('voice-log');
     if (!el) return;
     el.innerHTML = voiceLogs.map(l =>
-        `<div style="color:${l.color}>${l.ts} ${l.msg}</div>`
+        `<div style="color:${l.color}">${l.ts} ${l.msg}</div>`
     ).join('');
 }
 
@@ -432,7 +432,7 @@ function showVoiceToast(text, success) {
         document.body.appendChild(toast);
     }
     toast.textContent = '🎤 ' + text;
-    toast.style.content = '1';
+    toast.style.opacity = '1';
     toast.style.borderColor = success === true ? 'rgba(0,255,136,0.5)' :
                                 success === false ? 'rgba(255,80,80,0.5)' :
                                 'rgba(255,255,255,0.15)';
@@ -448,7 +448,7 @@ function applyColor(hex) {
     document.getElementById('colorPicker').value = hex;
     baseColor.set(hex);
     particlesMaterial.color.set(hex);
-    document.querySelectorAll('.present-dot').forEach(d => d.classList.remove('active'));
+    document.querySelectorAll('.preset-dot').forEach(d => d.classList.remove('active'));
     const match = document.querySelector('.preset-dot[data-color="' + hex + '"]');
     if (match) match.classList.add('active');
 }
@@ -458,8 +458,8 @@ function applyColorRainbow() {
     if (!particlesMaterial) return;
     particlesMaterial.vertexColors = true;
     particlesMaterial.needsUpdate = true;
-    document.querySelectorAll('.preset-dot').forEach(d.classList.remove('active'));
-    const rb = document.querySelector('.present-dot[data-color="rainbow"]');
+    document.querySelectorAll('.preset-dot').forEach(d => d.classList.remove('active'));
+    const rb = document.querySelector('.preset-dot[data-color="rainbow"]');
     if (rb) rb.classList.add('active');
 }
 
@@ -477,7 +477,7 @@ function setSpeedByValue(s) {
 function setBgByValue(mode) {
     currentBg = mode;
     if (mode === 'dark') {
-        scene.fog = new THREE.FogExp2(0x4040a,
+        scene.fog = new THREE.FogExp2(0x04040a,
             parseFloat(document.getElementById('fogSlider').value) / 1000);
         if (bgCanvas) bgCanvas.style.display = 'none';        
     } else {
@@ -487,8 +487,8 @@ function setBgByValue(mode) {
 }
 
 function changeParticleCount(dir) {
-    const slider = document.getElementByIt('densitySlider');
-    const next = Math.max(1, Math.min(1, parseInt(slider.value) + dir));
+    const slider = document.getElementById('densitySlider');
+    const next = Math.max(1, Math.min(10, parseInt(slider.value) + dir));
     slider.value = next;
     slider.dispatchEvent(new Event('input'));
 }
@@ -507,13 +507,13 @@ function calculateShapeTargets(type) {
                 const r = Math.cbrt(Math.random());
                 x = 16 * Math.pow(Math.sin(t), 3) * 1.5 * r;
                 y = (13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t)) * 1.5 * r;
-                z = (Math.random()-0.5)*3 + (rr/6)*Math.sin(theta*8);
+                z = (Math.random()-0.5) * 8 * r;
                 break;
             }
             case 'flower': {
                 const theta = Math.random() * TAU;
                 const rr = Math.cos(5 * theta) * 15;
-                x = rr * Math.cod(theta);
+                x = rr * Math.cos(theta);
                 y = rr * Math.sin(theta);
                 z = (Math.random()-0.5)*3 + (rr/6)*Math.sin(theta*8);
                 break;
@@ -532,7 +532,7 @@ function calculateShapeTargets(type) {
                     x = d*Math.cos(a); z = d*Math.sin(a); y = (Math.random()-0.5)*1.2;
                     const tilt = 0.42;
                     const ty = y*Math.cos(tilt) - z*Math.sin(tilt);
-                    z = y*Math.sin(tile) + z*Math.cos(tilt); y = ty;
+                    z = y*Math.sin(tilt) + z*Math.cos(tilt); y = ty;
                 }
                 break;
             }
@@ -562,7 +562,7 @@ function calculateShapeTargets(type) {
             case 'torus': {
                 const u = Math.random()*TAU, v = Math.random()*TAU;
                 const R = 12, r = 4;
-                x = (R+r*Math.cod(v))* Math.cos(u);
+                x = (R+r*Math.cos(v))* Math.cos(u);
                 y = (R+r*Math.cos(v))*Math.sin(u);
                 z = r*Math.sin(v);
                 break;
@@ -611,7 +611,7 @@ function calculateShapeTargets(type) {
                 const face = Math.floor(Math.random()*6);
                 const a2 = (Math.random()-0.5)*20, b2= (Math.random()-0.5)*20, c2 =10;
                 if ( face === 0){x=a2;y=b2;z=c2;}
-                else if (face===1){x =a2;y=b2;z=c2;}
+                else if (face===1){x =a2;y=b2;z=-c2;}
                 else if (face ===2){x = a2;y=c2;z=b2;}
                 else if(face ===3){x =a2;y=-c2;z=b2;}
                 else if(face ===4){x =c2;y=a2;z=b2;}
@@ -637,16 +637,16 @@ function calculateShapeTargets(type) {
             case 'klein': {
                 const u = Math.random()*TAU,v=Math.random()*TAU;
                 const Rk = 6;
-                if(u < Math.PI){                x  = (Rk+Math.cos(u/2)*Math.sin(v)-Math.sin(u/2)*Math.sin(2*v))*Math.cos(u);
-                y = (Rk+Math.cos(u/2)*Math.sin(v)-Math.sin(u/2)*Math.sin(2*v))*Math.sin(u);
-            } else {
+                if(u < Math.PI){
+                    x  = (Rk+Math.cos(u/2)*Math.sin(v)-Math.sin(u/2)*Math.sin(2*v))*Math.cos(u);
+                    y = (Rk+Math.cos(u/2)*Math.sin(v)-Math.sin(u/2)*Math.sin(2*v))*Math.sin(u);
+                    z = Math.sin(u/2)*Math.sin(v)+Math.cos(u/2)*Math.sin(2*v);
+                } else {
                 x = (Rk + Math.cos(u/2)*Math.sin(v)+Math.sin(u/2)*Math.sin(2*v))*Math.cos(u);
                 y = (Rk + Math.cos(u/2)*Math.sin(v)+Math.sin(u/2)*Math.sin(2*v))*Math.sin(u);
                 z = -Math.sin(u/2)*Math.sin(v)+Math.cos(u/2)*Math.sin(2*v);
-            }
-            break;
-
-
+                }
+                break;
             }
             case 'nebula' : {
                 const offs =[[0,0,0],[8,-4,3],[-7,5,-2],[3,8,-6],[-5,-6,4]];
@@ -679,7 +679,7 @@ function animate (){
     if (now -  lastFpsTime >= 1000){
         fps = frameCount;
         frameCount =0;
-        lastFpsTime = nowl
+        lastFpsTime = now;
         document.getElementById('stat-fps').textContent = 'FPS: ' + fps;
     }
 
@@ -705,7 +705,7 @@ function animate (){
         }
         particleGeometry.attributes.color.needsUpdate = true;
     }
-    if (particleGeometry && targetPositions.length === PARTICLE_COUNT.COUNT * 3) {
+    if (particleGeometry && targetPositions.length === PARTICLE_COUNT * 3) {
         const pos = particleGeometry.attributes.position.array;
         const ef = handExpansionFactor;
         const lf = lerpFactor;
@@ -733,20 +733,20 @@ function setShape(shape) {
     calculateShapeTargets(shape);
     document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
     const btn = document.getElementById('btn-' + shape);
-    if (btn) trailEnabled.classList.add('active');
+    if (btn)btn.classList.add('active');
     document.getElementById('stat-shape').textContent = 'Shape: ' + shape;
 }
 
 function setSpeed(s, el) {
     rotationSpeed = s;
-    el.closet('.speed-row').querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    el.closest('.speed-row').querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
 }
 
 function setTransition(factor, el) {
     lerpFactor = factor;
     el.closest('.speed-row').querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
-    elclassList.add('active');
+    el.classList.add('active');
 }
 
 function setBg(mode, el) {
@@ -758,7 +758,7 @@ function setBg(mode, el) {
 function applyPreset(el) {
     const color = el.dataset.color;
     document.querySelectorAll('.preset-dot').forEach(d => d.classList.remove('active'));
-    el.classlist.add('active');
+    el.classList.add('active');
     if(color === 'rainbow'){
         applyColorRainbow();return;
     }
@@ -792,7 +792,7 @@ function toggleTrail(){
     btn.classList.toggle('active-red',trailEnabled);
 }
 function toggleOrbit(){
-    orbitEnabled = !oribitEnabled;
+    orbitEnabled = !orbitEnabled;
     const btn = document.getElementById('orbitBtn');
     btn.textContent = orbitEnabled ? 'Mouse Orbit ON' : 'Mouse Orbit OFF';
     btn.classList.toggle('active-red', orbitEnabled);
@@ -812,7 +812,7 @@ function toggleAudio(){
         }
         document.getElementById('audioBtn').textContent ='🎙 Enable Mic';
         document.getElementById('audioBtn').classList.remove('active-red');
-        document.getElementById('audio').textContent = '_';
+        document.getElementById('audioLevel').textContent = '-';
         document.getElementById('audio-bar-wrap').style.display ='none';
         return;
     }
@@ -821,12 +821,12 @@ function toggleAudio(){
         audioCtx = new(window.AudioContext || window.webkitAudioContext)();
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 64;
-        audioArray = new Unit8Array(analyser.frequencyBinCount);
+        audioArray = new Uint8Array(analyser.frequencyBinCount);
         audioCtx.createMediaStreamSource(stream).connect(analyser);
         audioEnabled = true;
-        document.getElementById('audio-Btn').textContent ='🎙 Mic ON';
+        document.getElementById('audioBtn').textContent ='🎙 Mic ON';
         document.getElementById('audioBtn').classList.add('active-red');
-        document.getElementById('audi-bar-wrap').style.display ='block';
+        document.getElementById('audio-bar-wrap').style.display ='block';
     })
     .catch(() => alert('Microphone access denied.'));
 
@@ -855,7 +855,7 @@ document.getElementById('densitySlider').addEventListener('input', e => {
 document.getElementById('sizeSlider').addEventListener('input', e => {
     particleSize = parseFloat(e.target.value) / 100;
     document.getElementById('sizeVal').textContent = particleSize.toFixed(2);
-    if (particleMaterial) particleMaterial.size = particleSize;
+    if (particlesMaterial) particlesMaterial.size = particleSize;
 });
 
 document.getElementById('fogSlider').addEventListener('input', e => {
@@ -872,7 +872,7 @@ function initEvents() {
 
     el.addEventListener('mousedown', e => {
         if (!orbitEnabled) return;
-        isDragging = true; prevMouse = { x: e.clientX, y: r.clientY };
+        isDragging = true; prevMouse = { x: e.clientX, y: e.clientY };
     });
     window.addEventListener('mousemove', e => {
         if (!isDragging || !orbitEnabled) return;
@@ -921,12 +921,12 @@ const hvL = document.getElementById('hv-L');
 const hvR = document.getElementById('hv-R');
 const infoL = document.getElementById('hv-info-L');
 const infoR = document.getElementById('hv-info-R');
-function handSpan(lm) { return Math.hypot(lm[0].x - lm[12].x, lm[9].y - lm[12].y); }
+function handSpan(lm) { return Math.hypot(lm[0].x - lm[12].x, lm[0].y - lm[12].y); }
 function pinchDist(lm) { return Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y); }
 function gestureLabel(lm) {
     if (pinchDist(lm) < 0.05) return 'Pinch';
     const s = handSpan(lm);
-    if (s > 0.25) return 'Open'; if(s < 0.12) return 'First'; return 'Mid';
+    if (s > 0.25) return 'Open'; if(s < 0.12) return 'Fist'; return 'Mid';
 }
 
 function onResults(results) {
@@ -958,13 +958,13 @@ function onResults(results) {
         if(isLeft){
             drawHandSkeleton(lm,'#00ff88','#00ffcc');
             hvL.classList.add('active-L');
-            infoL.textContent = 'Left:' + gestureLabel(lm);
+            infoL.textContent = 'Left: ' + gestureLabel(lm);
             leftLm = lm;
         }
         else{
             drawHandSkeleton(lm,'#00ccff','#44eeff');
             hvR.classList.add('active-R');
-            inforR.textContent = 'Right:' + gestureLabel(lm);
+            infoR.textContent = 'Right: ' + gestureLabel(lm);
             rightLm = lm;
         }
     });
@@ -976,9 +976,9 @@ function onResults(results) {
             rightHandPresent = true;
             const wx = rightLm[0].x;
             const wy = rightLm[0].y;
-            if(prevWristX != null){
+            if(prevWristX !== null){
                 const dx = wx -prevWristX;
-                const dy = wy - prevWristX;
+                const dy = wy - prevWristY;
 
                 manualRotY -= dx *4.0;
                 manualRotX += dy*2.5;
@@ -998,26 +998,24 @@ function onResults(results) {
             rightHandPresent = false;
             prevWristX = prevWristY = null;
         }
-        if(!leftLm){
-            const factor = Math.max(0.2,Math.min(3.0,handSpan(rightLm)*9.5));
-            handExpansionFactor += (factor - handExpansionFactor)* 0.12;
+
+        if (leftLm && rightLm && pinchDist(leftLm) < 0.05 && pinchDist(rightLm) < 0.05) {
+            handExpansionFactor = 1.0;
+            camera.position.z = 32;
+            manualRotX = 0;
         }
-    } else {
-        rightHandPresent = false;
-        prevWristX = prevWristY = null;
-    }
 
     if (leftLm && rightLm) statusTxt.textContent = '2 hands ✓ - L:expand R:rotate';
     else if (leftLm) statusTxt.textContent = 'Left ✓ - open/close to expand';
-    else if (rightLm) statusTxt.textContent = 'Right ✓ -move wrist to rotate';
+    else if (rightLm) statusTxt.textContent = 'Right ✓ - move wrist to rotate';
 }
 
 const hands = new Hands({
     locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
 });
 hands.setOptions({
-    maxNumbers: 2,
-    modalComplexity: 1,
+    maxNumHands: 2,
+    modelComplexity: 1,
     minDetectionConfidence: 0.55,
     minTrackingConfidence: 0.55
 });
