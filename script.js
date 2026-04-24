@@ -913,3 +913,37 @@ function initEvents() {
         if (e.key === 'v' || e.key === 'V') toggleVoice();
     });
 }
+
+const videoEl = document.getElementById('input_video');
+const statusDot = document.getElementById('status-dot');
+const statusTxt = document.getElementById('status-text');
+const hvL = document.getElementById('hv-L');
+const hvR = document.getElementById('hv-R');
+const infoL = document.getElementById('hv-info-L');
+const infoR = document.getElementById('hv-info-R');
+function handSpan(lm) { return Math.hypot(lm[0].x - lm[12].x, lm[9].y - lm[12].y); }
+function pinchDist(lm) { return Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y); }
+function gestureLabel(lm) {
+    if (pinchDist(lm) < 0.05) return 'Pinch';
+    const s = handSpan(lm);
+    if (s > 0.25) return 'Open'; if(s < 0.12) return 'First'; return 'Mid';
+}
+
+function onResults(results) {
+    clearHandCanvas();
+
+    const lms = results.multiHandLandmarks;
+    const handedness = results.multiHandedness;
+
+    if (!lms || lms.length === 0) {
+        statusDot.classList.remove('active');
+        statusTxt.textContent = 'No hand detected';
+        handExpansionFactor += (1.0 - handExpansionFactor) * 0.04;
+        rightHandPresent = false;
+        prevWristX = prevWristY = null;
+        hvL.classList.remove('active-L'); hvR.classList.remove('active-R');
+        infoL.textContent = 'Left: -'; infoR.textContent = 'Right: -';
+        return;
+    }
+    
+}
