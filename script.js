@@ -727,3 +727,189 @@ function animate (){
     document.getElementById('hand-pct').textContent = Math.round(pct) + '%';
     renderer.render(scene, camera);
 }
+
+function setShape(shape) {
+    currentShape = shape;
+    calculateShapeTargets(shape);
+    document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('btn-' + shape);
+    if (btn) trailEnabled.classList.add('active');
+    document.getElementById('stat-shape').textContent = 'Shape: ' + shape;
+}
+
+function setSpeed(s, el) {
+    rotationSpeed = s;
+    el.closet('.speed-row').querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function setTransition(factor, el) {
+    lerpFactor = factor;
+    el.closest('.speed-row').querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    elclassList.add('active');
+}
+
+function setBg(mode, el) {
+    setBgByValue(mode);
+    el.closest('.speed-row').querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function applyPreset(el) {
+    const color = el.dataset.color;
+    document.querySelectorAll('.preset-dot').forEach(d => d.classList.remove('active'));
+    el.classlist.add('active');
+    if(color === 'rainbow'){
+        applyColorRainbow();return;
+    }
+    applyColor(color);
+}
+
+function applyCustomCount(){
+    const raw = parseInt(document.getElementById('particleInput').value) || 100000;
+    const val = Math.max(1000,Math.min(3000000,raw));
+    document.getElementById('particleInput').value = val;
+    let nearest = 0,minDiff = Infinity;
+    DENSITY_LEVELS.forEach((l,i) => {
+        const d = Math.abs(l-val);
+        if(d <minDiff){
+            minDiff=d;
+            nearest=i;
+        }
+    });
+    document.getElementById('densitySlider').value = nearest +1;
+    document.getElementById('densityVal').textContent = DENSITY_LABELS[nearest];
+    PARTICLE_COUNT = val;
+    buildParticleSystem();
+    calculateShapeTargets(currentShape);
+}
+
+function toggleTrail(){
+    trailEnabled = !trailEnabled;
+    renderer.setClearColor(0x04040a, trailEnabled ? 0.12 : 1.0);
+    const btn = document.getElementById('trailBtn');
+    btn.textContent =  trailEnabled ? 'Trails ON' : 'Trails OFF';
+    btn.classList.toggle('active-red',trailEnabled);
+}
+function toggleOrbit(){
+    orbitEnabled = !oribitEnabled;
+    const btn = document.getElementById('orbitBtn');
+    btn.textContent = orbitEnabled ? 'Mouse Orbit ON' : 'Mouse Orbit OFF';
+    btn.classList.toggle('active-red', orbitEnabled);
+}
+
+function togglePanel(){
+    panelVisible = !panelVisible;
+    document.getElementById('ui').classList.toggle('hidden',!panelVisible);
+}
+function toggleAudio(){
+    if (audioEnabled){
+        audioEnabled = false;
+        if(audioCtx) {
+            audioCtx.close();
+            audioCtx = null;
+            analyser = null;
+        }
+        document.getElementById('audioBtn').textContent ='🎙 Enable Mic';
+        document.getElementById('audioBtn').classList.remove('active-red');
+        document.getElementById('audio').textContent = '_';
+        document.getElementById('audio-bar-wrap').style.display ='none';
+        return;
+    }
+    navigator.mediaDevices.getUserMedia({audio: true,video:false})
+    .then(stream =>{
+        audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        audioArray = new Unit8Array(analyser.frequencyBinCount);
+        audioCtx.createMediaStreamSource(stream).connect(analyser);
+        audioEnabled = true;
+        document.getElementById('audio-Btn').textContent ='🎙 Mic ON';
+        document.getElementById('audioBtn').classList.add('active-red');
+        document.getElementById('audi-bar-wrap').style.display ='block';
+    })
+    .catch(() => alert('Microphone access denied.'));
+
+}
+function takeScreenshot(){
+    renderer.render(scene,camera);
+    const link = document.createElement('a');
+    link.href = renderer.domElement.toDataURL('image/png');
+    link.download = 'particle-lab-' + currentShape + '.png';
+    link.click();
+}
+
+document.getElementById('colorPicker').addEventListener('input', e => {
+    applyColor(e.target.value);
+});
+
+document.getElementById('densitySlider').addEventListener('input', e => {
+    const idx = parseInt(e.target.value) - 1;
+    document.getElementById('densityVal').textContent = DENSITY_LABELS[idx];
+    document.getElementById('particleInput').value = DENSITY_LEVELS[idx];
+    PARTICLE_COUNT = DENSITY_LEVELS[idx];
+    buildParticleSystem();
+    calculateShapeTargets(currentShape);
+});
+
+document.getElementById('sizeSlider').addEventListener('input', e => {
+    particleSize = parseFloat(e.target.value) / 100;
+    document.getElementById('sizeVal').textContent = particleSize.toFixed(2);
+    if (particleMaterial) particleMaterial.size = particleSize;
+});
+
+document.getElementById('fogSlider').addEventListener('input', e => {
+    const density = parseFloat(e.target.value) / 1000;
+    document.getElementById('fogVal').textContent = density.toFixed(3);
+    if (currentBg === 'dark') {
+        if (scene.fog) scene.fog.density = density;
+        else scene.fog = new THREE.FogExp2(0x04040a, density);
+    }
+});
+
+function initEvents() {
+    const el = renderer.domElement;
+
+    el.addEventListener('mousedown', e => {
+        if (!orbitEnabled) return;
+        isDragging = true; prevMouse = { x: e.clientX, y: r.clientY };
+    });
+    window.addEventListener('mousemove', e => {
+        if (!isDragging || !orbitEnabled) return;
+        manualRotY += (e.clientX - prevMouse.x) * 0.007;
+        manualRotX -= (e.clientY - prevMouse.y) * 0.007;
+        manualRotX = Math.max(-1.2, Math.min(1.2, manualRotX));
+        prevMouse = { x: e.clientX, y: e.clientY }; 
+    });
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    let lastTouch = null;
+    el.addEventListener('touchstart', e => { if (orbitEnabled) lastTouch = e.touches[0]; }, { passive: true });
+    el.addEventListener('touchmove', e => {
+        if (!orbitEnabled || !lastTouch) return;
+        const t = e.touches[0];
+        manualRotY += (t.clientX - lastTouch.clientX) * 0.007;
+        manualRotX -= (t.clientY - lastTouch.clientY) * 0.007;
+        manualRotX = Math.max(-1.2, Math.min(1.2, manualRotX));
+        lastTouch = t;
+    }, { passive : true });
+    el.addEventListener('touchend', () => { lastTouch = null; });
+
+    el.addEventListener('wheel', e => {
+        camera.position.z = Math.max(5, Math.min(80, camera.position.z + e.deltaY * 0.04));
+    }, { passive: true });
+
+    window.addEventListener('keydown', e => {
+        if (e.target.tagName === 'INPUT') return;
+        const map = {
+            'h':'heart','f':'flower','s':'saturn','e':'fireworks','d':'dna','t':'torus','g':'galaxy','y':'pyramid','b':'sphere','w':'wave','m':'mobius','c':'cube',
+            'k':'knot','r':'spring','l':'klein','n':'nebula'
+        };
+        if (map[e.key]) setShape(map[e.key]);
+        if (e.key === 'Tab') { e.preventDefault(); togglePanel(); }
+        if (e.key === 'p' || e.key === 'P') takeScreenshot();
+        if (e.key === 'o' || e.key === 'O') toggleOrbit();
+        if (e.key === 'a' || e.key === 'A') toggleAudio();
+        if (e.key === 'v' || e.key === 'V') toggleVoice();
+    });
+}
